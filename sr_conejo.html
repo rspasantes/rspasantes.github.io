@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Guarida del SrConejo | Roberto</title>
+    <meta name="description" content="Proyecto musical con IA utilizando Suno.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specific styles for this page */
+        .music-tracks {
+            margin-top: 3rem;
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .track-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .track-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo"><a href="index.html" style="display: flex; align-items: center; gap: 0.5rem;">
+                        Portfolio.<span style="color: var(--accent-color)">SrConejo</span>
+                    </a></div>
+                <button class="mobile-menu-btn" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="index.html">Volver al Inicio</a></li>
+                    <li><a href="#about">Sobre el proyecto</a></li>
+                    <li><a href="#tracks">Pistas</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Project Hero Section -->
+        <section id="hero" style="min-height: 60vh;">
+            <div class="container hero-content">
+                <img src="assets/img/sr_conejo_logo.png" alt="Logo SrConejo"
+                    style="width: 150px; height: 150px; border-radius: 50%; margin-bottom: 2rem; border: 4px solid var(--accent-color);">
+                <h1>La Guarida del <span class="highlight">SrConejo</span></h1>
+                <p>Explorando los límites de la creatividad musical con Inteligencia Artificial. <br>Powered by Suno AI.
+                </p>
+            </div>
+        </section>
+
+        <!-- About Project Section -->
+        <section id="about">
+            <div class="container">
+                <h2 class="section-title">Sobre el Proyecto</h2>
+                <div class="about-content">
+                    <p>
+                        "La Guarida del SrConejo" es un experimento creativo donde fusiono mi pasión por la tecnología
+                        con la música.
+                        Utilizando herramientas avanzadas de generación de audio como <strong>Suno AI</strong>, compongo
+                        piezas únicas
+                        que exploran diferentes géneros, desde lo electrónico hasta lo ambiental.
+                    </p>
+                    <p>
+                        Este proyecto no solo trata de generar música, sino de curar y estructurar álbumes conceptuales
+                        que cuenten una historia a través de los algoritmos.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tracks/Demo Section -->
+        <section id="tracks" style="padding: 4rem 1.5rem;">
+            <div class="container">
+                <h2 class="section-title">Muestra Musical</h2>
+                <div class="music-tracks">
+                    <!-- Placeholder Track 1 -->
+                    <div class="track-card">
+                        <div class="track-icon">🎵</div>
+                        <div>
+                            <h3>Sinfonía Digital #1</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Synthwave / Cyberpunk</p>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Track 2 -->
+                    <div class="track-card">
+                        <div class="track-icon">🐇</div>
+                        <div>
+                            <h3>El Salto del Conejo</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Lo-Fi Beats</p>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Track 3 -->
+                    <div class="track-card">
+                        <div class="track-icon">🎹</div>
+                        <div>
+                            <h3>Ecos de la Madriguera</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Ambient / Experimental</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 3rem;">
+                    <a href="index.html#projects" class="btn">Volver a Proyectos</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 La Guarida del SrConejo. Creado por Roberto.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

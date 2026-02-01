@@ -4,152 +4,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio | Roberto</title>
-    <meta name="description" content="Portfolio de desarrollador web y proyectos personales.">
+    <title>En Construcción | Roberto Spasantes</title>
+    <meta name="description"
+        content="Sitio web en construcción. Próximamente el nuevo portafolio de Roberto Spasantes.">
 
-    <!-- Fonts -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent-glow: #3b82f6;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Effect */
+        .ambient-light {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.5;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem 4rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+            width: 600px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.05em;
+        }
+
+        p.subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .loader {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 2rem;
+        }
+
+        .loader div {
+            position: absolute;
+            border: 4px solid var(--accent-glow);
+            opacity: 1;
+            border-radius: 50%;
+            animation: ripple 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+        }
+
+        .loader div:nth-child(2) {
+            animation-delay: -0.5s;
+        }
+
+        @keyframes ripple {
+            0% {
+                top: 36px;
+                left: 36px;
+                width: 0;
+                height: 0;
+                opacity: 0;
+            }
+
+            4.9% {
+                top: 36px;
+                left: 36px;
+                width: 0;
+                height: 0;
+                opacity: 0;
+            }
+
+            5% {
+                top: 36px;
+                left: 36px;
+                width: 0;
+                height: 0;
+                opacity: 1;
+            }
+
+            100% {
+                top: 0px;
+                left: 0px;
+                width: 72px;
+                height: 72px;
+                opacity: 0;
+            }
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: #52525b;
+        }
+    </style>
 </head>
 
 <body>
 
-    <header>
-        <div class="container">
-            <nav>
-                <div class="logo">Portfolio.</div>
-                <button class="mobile-menu-btn" aria-label="Toggle menu">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <ul class="nav-links">
-                    <li><a href="#hero">Inicio</a></li>
-                    <li><a href="#about">Sobre Mí</a></li>
-                    <li><a href="#news">Novedades</a></li>
-                    <li><a href="#projects">Proyectos</a></li>
-                </ul>
-            </nav>
+    <div class="ambient-light"></div>
+
+    <main class="container">
+        <div class="loader">
+            <div></div>
+            <div></div>
         </div>
-    </header>
-
-    <main>
-        <!-- Hero Section -->
-        <section id="hero">
-            <div class="container hero-content">
-                <h1>Hola, soy <span class="highlight">Roberto</span>.<br>Desarrollador Web.</h1>
-                <p>Construyo experiencias digitales modernas, minimalistas y funcionales. Apasionado por el código y el
-                    diseño limpio.</p>
-                <a href="#projects" class="btn">Ver Proyectos</a>
-            </div>
-        </section>
-
-        <!-- About Section -->
-        <section id="about">
-            <div class="container">
-                <h2 class="section-title">Sobre Mí</h2>
-                <div class="about-content">
-                    <p>
-                        Me llamo Roberto y me encanta todo lo relacionado con la tecnología. Llevo trabajando como
-                        programador desde hace más de diez años.
-                        He trabajado con lenguajes y tecnologías de todo tipo. Soy aficionado a los videojuegos y me
-                        encanta todo lo relacionado con desarrollo de videojuegos.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- News Section -->
-        <section id="news">
-            <div class="container">
-                <h2 class="section-title">Últimas Novedades</h2>
-                <div class="news-grid">
-                    <!-- News Item 1 -->
-                    <div class="news-card">
-                        <span class="news-date">29 Ene 2026</span>
-                        <h3>Lanzamiento del Portfolio</h3>
-                        <p>Web oficial publicada. Aquí compartiré todos mis avances.</p>
-                    </div>
-
-                    <!-- News Item 2 -->
-                    <div class="news-card">
-                        <span class="news-date">28 Ene 2026</span>
-                        <h3>Lume!: Nueva Marca</h3>
-                        <p>Unificación de todos mis proyectos de videojuegos bajo el nombre de <strong>Lume!</strong>.
-                        </p>
-                        <a href="lume.html" class="news-link">Leer más &rarr;</a>
-                    </div>
-
-                    <!-- News Item 3 -->
-                    <div class="news-card">
-                        <span class="news-date">20 Ene 2026</span>
-                        <h3>SrConejo: Pruebas con Suno</h3>
-                        <p>Experimentando con nuevos géneros musicales en la Guarida.</p>
-                        <a href="sr_conejo.html" class="news-link">Leer más &rarr;</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Projects Section -->
-        <section id="projects">
-            <div class="container">
-                <h2 class="section-title">Proyectos Destacados</h2>
-                <div class="projects-grid">
-                    <!-- Project 1: SrConejo -->
-                    <article class="project-card" onclick="window.location.href='sr_conejo.html'">
-                        <div class="project-image"
-                            style="background: linear-gradient(135deg, #FF6B6B 0%, #556270 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <img src="assets/img/sr_conejo_logo.png" alt="Logo La Guarida del SrConejo"
-                                style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <div class="project-info">
-                            <h3>La Guarida del SrConejo</h3>
-                            <span>IA / Suno / Música</span>
-                            <p>Proyecto de composición musical experimental utilizando Inteligencia Artificial.</p>
-                        </div>
-                    </article>
-
-                    <!-- Project 2: Lume! -->
-                    <article class="project-card" onclick="window.location.href='lume.html'">
-                        <div class="project-image"
-                            style="background: linear-gradient(135deg, #f97316 0%, #dc2626 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <img src="assets/img/lume_logo.png" alt="Logo Lume!"
-                                style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <div class="project-info">
-                            <h3>Lume!</h3>
-                            <span>Videojuegos / Indie Dev</span>
-                            <p>Mi marca personal para el desarrollo de videojuegos y experiencias interactivas.</p>
-                        </div>
-                    </article>
-
-                    <!-- Project 3 -->
-                    <article class="project-card" onclick="window.open('#', '_blank')">
-                        <div class="project-image"
-                            style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);"></div>
-                        <div class="project-info">
-                            <h3>Juego Web</h3>
-                            <span>Canvas API</span>
-                            <p>Un pequeño juego interactivo para demostrar lógica y animación.</p>
-                        </div>
-                    </article>
-                </div>
-            </div>
-        </section>
+        <h1>En Construcción</h1>
+        <p class="subtitle">
+            Estamos preparando algo increíble.<br>
+            Vuelve pronto para ver la nueva experiencia.
+        </p>
+        <div class="footer">
+            &copy; 2026 Roberto Spasantes
+        </div>
     </main>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 Mi Portfolio. Creado con HTML, CSS y JS.</p>
-        </div>
-    </footer>
-
-    <script src="script.js"></script>
 </body>
 
 </html>

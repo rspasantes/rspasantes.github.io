@@ -167,6 +167,46 @@ nav {
     text-align: center;
 }
 
+/* Skills Section */
+.skills-container {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    text-align: left;
+}
+
+.skill-category h3 {
+    font-size: 1rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-tags span {
+    font-size: 0.85rem;
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.skill-tags span:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(99, 102, 241, 0.1);
+    /* Indigo tint */
+}
+
+
 /* News Section */
 #news {
     padding: var(--section-padding);

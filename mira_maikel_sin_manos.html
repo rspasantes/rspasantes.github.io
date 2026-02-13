@@ -111,10 +111,10 @@
         const GRAVITY = 0.6;
         const JUMP_FORCE = -10;
         const GROUND_Y = 250;
-        const GAME_SPEED_INITIAL = 6;
-        const SPEED_INCREMENT = 0.001;
-        const OBSTACLE_SPAWN_MIN = 60; // frames
-        const OBSTACLE_SPAWN_MAX = 120; // frames
+        const GAME_SPEED_INITIAL = 3;
+        const SPEED_INCREMENT = 0.0001;
+        const OBSTACLE_SPAWN_MIN = 90; // frames
+        const OBSTACLE_SPAWN_MAX = 180; // frames
 
         // DOM Elements
         const canvas = document.getElementById('gameCanvas');
@@ -201,8 +201,8 @@
 
         class Obstacle {
             constructor() {
-                this.w = 20 + Math.random() * 30;
-                this.h = 30 + Math.random() * 30;
+                this.w = 20 + Math.random() * 20;
+                this.h = 20 + Math.random() * 30;
                 this.x = canvas.width;
                 this.y = canvas.height - 10 - this.h;
                 this.markedForDeletion = false;

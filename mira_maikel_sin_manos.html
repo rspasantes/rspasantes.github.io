@@ -6,9 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mira Maikel Sin Manos</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             background-color: #f7f7f7;
             color: #535353;
             font-family: 'Courier New', Courier, monospace;
@@ -20,6 +24,7 @@
             height: 100vh;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #game-container {
@@ -36,6 +41,8 @@
             display: block;
             width: 100%;
             height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
         #ui-layer {
@@ -56,13 +63,15 @@
             font-size: 24px;
             margin-bottom: 10px;
             text-align: center;
-            background-color: rgba(247, 247, 247, 0.8);
-            padding: 10px;
+            background-color: rgba(247, 247, 247, 0.9);
+            padding: 15px 20px;
+            border: 2px solid #535353;
         }
 
         .sub-message {
             font-size: 14px;
             opacity: 0.7;
+            margin-top: 8px;
         }
 
         #score {
@@ -84,6 +93,16 @@
         .hidden {
             display: none !important;
         }
+
+        @media (max-width: 600px) {
+            .message {
+                font-size: 18px;
+            }
+
+            .sub-message {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 
@@ -97,26 +116,30 @@
         <div id="ui-layer">
             <div id="start-message" class="message">
                 MIRA MAIKEL SIN MANOS
-                <div class="sub-message" id="input-instruction">Press SPACE to jump</div>
+                <div class="sub-message" id="input-instruction">Presiona ESPACIO para saltar</div>
             </div>
             <div id="game-over-message" class="message hidden">
                 GAME OVER
-                <div class="sub-message">Tap or Press SPACE to restart</div>
+                <div class="sub-message">Presiona ESPACIO para reiniciar</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Game Constants
-        const GRAVITY = 0.25;
-        const JUMP_FORCE = -7;
-        const GROUND_Y = 250;
-        const GAME_SPEED_INITIAL = 3;
-        const SPEED_INCREMENT = 0.0001;
-        const OBSTACLE_SPAWN_MIN = 90; // frames
-        const OBSTACLE_SPAWN_MAX = 180; // frames
+        // ==================== CONFIGURACIÓN ====================
+        const CONFIG = {
+            GRAVITY: 0.4,
+            JUMP_VELOCITY: -10,
+            GROUND_HEIGHT: 10,
+            INITIAL_SPEED: 3.5,
+            SPEED_INCREMENT: 0.00015,  // Incremento mucho más lento
+            MAX_SPEED: 7.5,  // Tope más razonable
+            OBSTACLE_BASE_MIN_DISTANCE: 300,  // Distancia mínima base
+            OBSTACLE_BASE_MAX_DISTANCE: 550,  // Distancia máxima base
+            CLOUD_SPAWN_DISTANCE: 300
+        };
 
-        // DOM Elements
+        // ==================== DOM ELEMENTS ====================
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('score');
@@ -125,215 +148,429 @@
         const gameOverMsg = document.getElementById('game-over-message');
         const inputInstruction = document.getElementById('input-instruction');
 
-        // Game State
-        let gameSpeed = GAME_SPEED_INITIAL;
+        // ==================== GAME STATE ====================
+        let gameSpeed = CONFIG.INITIAL_SPEED;
         let score = 0;
-        let highScore = localStorage.getItem('miraMaikelHighScore') || 0;
-        let frameCount = 0;
+        let lastMilestone = 0;  // Para trackear hitos de 100 puntos
+        let highScore = parseInt(localStorage.getItem('miraMaikelHighScore')) || 0;
         let isPlaying = false;
         let isGameOver = false;
-        let animationId;
+        let animationId = null;
+        let lastTime = 0;
+        let distanceTraveled = 0;
+        let nextObstacleDistance = 0;
+        let nextCloudDistance = 0;
+        let flashScore = false;  // Para efecto visual de puntuación
 
         // Mobile Detection
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         if (isMobile) {
-            inputInstruction.innerText = "Tap to jump";
+            inputInstruction.innerText = "Toca la pantalla para saltar";
         }
 
-        // Updating High Score UI
-        highScoreEl.innerText = `HI ${Math.floor(highScore).toString().padStart(5, '0')}`;
+        // Update High Score Display
+        highScoreEl.innerText = `HI ${highScore.toString().padStart(5, '0')}`;
 
+        // ==================== CANVAS RESIZE ====================
         function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            const container = canvas.parentElement;
+            const dpr = window.devicePixelRatio || 1;
+
+            canvas.width = container.clientWidth * dpr;
+            canvas.height = container.clientHeight * dpr;
+
+            ctx.scale(dpr, dpr);
+
+            canvas.style.width = container.clientWidth + 'px';
+            canvas.style.height = container.clientHeight + 'px';
         }
+
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Entity Classes
+        // ==================== PLAYER CLASS ====================
         class Player {
             constructor() {
-                this.w = 40;
-                this.h = 40;
+                this.width = 44;
+                this.height = 47;
                 this.x = 50;
-                this.y = canvas.height - this.h - 10; // Simple ground level approx
-                this.dy = 0;
-                this.jumpTimer = 0;
-                this.grounded = true;
-                this.color = '#535353';
+                this.y = 0;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.frameIndex = 0;
+                this.frameTimer = 0;
+                this.frameInterval = 100; // milliseconds
+            }
+
+            get groundY() {
+                return canvas.clientHeight - CONFIG.GROUND_HEIGHT - this.height;
             }
 
             jump() {
-                if (this.grounded) {
-                    this.dy = JUMP_FORCE;
-                    this.grounded = false;
+                if (!this.isJumping) {
+                    this.velocityY = CONFIG.JUMP_VELOCITY;
+                    this.isJumping = true;
                 }
             }
 
-            update() {
-                // Apply Gravity
-                this.dy += GRAVITY;
-                this.y += this.dy;
+            update(deltaTime) {
+                // Apply gravity
+                this.velocityY += CONFIG.GRAVITY;
+                this.y += this.velocityY;
 
-                // Ground Collision
-                // Calculate dynamic ground based on canvas height just in case, 
-                // but for simplicity we keep a fixed relative bottom 
-                const groundLevel = canvas.height - 10;
+                // Ground collision
+                if (this.y >= this.groundY) {
+                    this.y = this.groundY;
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                }
 
-                if (this.y + this.h > groundLevel) {
-                    this.y = groundLevel - this.h;
-                    this.dy = 0;
-                    this.grounded = true;
+                // Animation frame
+                if (!this.isJumping) {
+                    this.frameTimer += deltaTime;
+                    if (this.frameTimer >= this.frameInterval) {
+                        this.frameTimer = 0;
+                        this.frameIndex = (this.frameIndex + 1) % 2;
+                    }
                 } else {
-                    this.grounded = false;
+                    this.frameIndex = 0;
                 }
             }
 
             draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                const drawX = this.x;
+                const drawY = this.y;
+                const drawWidth = this.width;
+                const drawHeight = this.height;
 
-                // Optional: Simple eye to give character
+                ctx.fillStyle = '#535353';
+
+                // Body
+                ctx.fillRect(drawX + 6, drawY, drawWidth - 12, drawHeight - 10);
+
+                // Head
+                ctx.fillRect(drawX + 10, drawY - 6, drawWidth - 20, 10);
+
+                // Eye
                 ctx.fillStyle = '#f7f7f7';
-                ctx.fillRect(this.x + 24, this.y + 8, 4, 4);
+                ctx.fillRect(drawX + 26, drawY - 2, 6, 4);
+
+                // Legs (animated)
+                ctx.fillStyle = '#535353';
+                if (this.isJumping) {
+                    // Both legs together when jumping
+                    ctx.fillRect(drawX + 12, drawY + drawHeight - 10, 8, 10);
+                    ctx.fillRect(drawX + 24, drawY + drawHeight - 10, 8, 10);
+                } else {
+                    // Running animation
+                    if (this.frameIndex === 0) {
+                        ctx.fillRect(drawX + 12, drawY + drawHeight - 10, 8, 10);
+                        ctx.fillRect(drawX + 24, drawY + drawHeight - 7, 8, 7);
+                    } else {
+                        ctx.fillRect(drawX + 12, drawY + drawHeight - 7, 8, 7);
+                        ctx.fillRect(drawX + 24, drawY + drawHeight - 10, 8, 10);
+                    }
+                }
+
+                // Tail
+                ctx.fillRect(drawX, drawY + 8, 8, 6);
+            }
+
+            getHitbox() {
+                return {
+                    x: this.x + 6,
+                    y: this.y,
+                    width: this.width - 12,
+                    height: this.height - 3
+                };
             }
         }
 
+        // ==================== OBSTACLE CLASS ====================
         class Obstacle {
             constructor() {
-                this.w = 20 + Math.random() * 20;
-                this.h = 20 + Math.random() * 30;
-                this.x = canvas.width;
-                this.y = canvas.height - 10 - this.h;
+                const types = [
+                    { width: 20, height: 40 },   // Cactus delgado y alto
+                    { width: 25, height: 45 },   // Cactus mediano
+                    { width: 30, height: 35 },   // Cactus ancho y bajo
+                    { width: 18, height: 50 },   // Cactus muy alto
+                    { width: 35, height: 30 }    // Cactus muy ancho
+                ];
+
+                const type = types[Math.floor(Math.random() * types.length)];
+                this.width = type.width;
+                this.height = type.height;
+                this.x = canvas.clientWidth;
+                this.y = canvas.clientHeight - CONFIG.GROUND_HEIGHT - this.height;
                 this.markedForDeletion = false;
-                this.color = '#535353';
             }
 
-            update() {
+            update(deltaTime) {
                 this.x -= gameSpeed;
-                if (this.x + this.w < 0) {
+
+                if (this.x + this.width < 0) {
                     this.markedForDeletion = true;
                 }
             }
 
             draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = '#535353';
+
+                // Main body
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Add some spikes for cactus effect
+                const spikeCount = Math.floor(this.width / 12) + 1;
+                for (let i = 0; i < spikeCount; i++) {
+                    const spikeX = this.x + (i * (this.width / spikeCount)) + 3;
+                    const spikeY = this.y + 10 + (i % 2) * 10;
+                    if (spikeY < this.y + this.height - 10) {
+                        ctx.fillRect(spikeX, spikeY, 4, 10);
+                    }
+                }
+            }
+
+            getHitbox() {
+                return {
+                    x: this.x + 3,
+                    y: this.y + 3,
+                    width: this.width - 6,
+                    height: this.height - 3
+                };
             }
         }
 
-        // Game Objects
+        // ==================== CLOUD CLASS ====================
+        class Cloud {
+            constructor() {
+                this.width = 46;
+                this.height = 14;
+                this.x = canvas.clientWidth;
+                this.y = 20 + Math.random() * 80;
+                this.markedForDeletion = false;
+            }
+
+            update(deltaTime) {
+                this.x -= gameSpeed * 0.3; // Clouds move slower
+
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = '#535353';
+                ctx.globalAlpha = 0.3;
+
+                // Simple cloud shape
+                ctx.fillRect(this.x, this.y + 4, 30, 8);
+                ctx.fillRect(this.x + 8, this.y, 14, 14);
+                ctx.fillRect(this.x + 20, this.y + 2, 18, 10);
+
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // ==================== GAME OBJECTS ====================
         let player = new Player();
         let obstacles = [];
-        let nextSpawnAttempt = 0;
+        let clouds = [];
 
-        function spawnObstacles() {
-            if (frameCount >= nextSpawnAttempt) {
-                obstacles.push(new Obstacle());
-                // Randomize next spawn
-                let min_spawn = OBSTACLE_SPAWN_MIN - (gameSpeed * 2);
-                if (min_spawn < 20) min_spawn = 20; // Cap max spawn rate
-
-                nextSpawnAttempt = frameCount + min_spawn + Math.random() * OBSTACLE_SPAWN_MAX;
-            }
+        // ==================== COLLISION DETECTION ====================
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y;
         }
 
         function checkCollisions() {
-            for (let obs of obstacles) {
-                // Axis-Aligned Bounding Box Collision
-                if (
-                    player.x < obs.x + obs.w &&
-                    player.x + player.w > obs.x &&
-                    player.y < obs.y + obs.h &&
-                    player.y + player.h > obs.y // Fixed collision logic
-                ) {
+            const playerHitbox = player.getHitbox();
+
+            for (let obstacle of obstacles) {
+                const obstacleHitbox = obstacle.getHitbox();
+                if (checkCollision(playerHitbox, obstacleHitbox)) {
                     return true;
                 }
             }
             return false;
         }
 
+        // ==================== GAME FUNCTIONS ====================
+        function getMinObstacleDistance() {
+            // Calcula el tiempo que el jugador está en el aire
+            const jumpDuration = (Math.abs(CONFIG.JUMP_VELOCITY) * 2) / CONFIG.GRAVITY;
+
+            // Calcula la distancia que recorre durante un salto a la velocidad actual
+            const jumpDistance = gameSpeed * jumpDuration;
+
+            // Añade un margen de seguridad del 40% y suma la distancia base
+            const safeDistance = jumpDistance * 1.4 + CONFIG.OBSTACLE_BASE_MIN_DISTANCE;
+
+            return safeDistance;
+        }
+
+        function spawnObstacle() {
+            obstacles.push(new Obstacle());
+
+            const minDistance = getMinObstacleDistance();
+            const randomExtra = Math.random() * (CONFIG.OBSTACLE_BASE_MAX_DISTANCE - CONFIG.OBSTACLE_BASE_MIN_DISTANCE);
+
+            nextObstacleDistance = distanceTraveled + minDistance + randomExtra;
+        }
+
+        function spawnCloud() {
+            clouds.push(new Cloud());
+            nextCloudDistance = distanceTraveled + CONFIG.CLOUD_SPAWN_DISTANCE + Math.random() * 200;
+        }
+
         function resetGame() {
             player = new Player();
+            player.y = player.groundY;
             obstacles = [];
+            clouds = [];
             score = 0;
-            gameSpeed = GAME_SPEED_INITIAL;
-            frameCount = 0;
-            nextSpawnAttempt = 0;
+            lastMilestone = 0;
+            flashScore = false;
+            gameSpeed = CONFIG.INITIAL_SPEED;
+            distanceTraveled = 0;
+            nextObstacleDistance = 400; // Primer obstáculo aparece después de un tiempo prudente
+            nextCloudDistance = 100;
             isGameOver = false;
             isPlaying = true;
-            scoreEl.innerText = "00000";
+            lastTime = performance.now();
 
+            scoreEl.innerText = "00000";
+            scoreEl.style.opacity = '1';
             startMsg.classList.add('hidden');
             gameOverMsg.classList.add('hidden');
 
-            resizeCanvas(); // Ensure size is correct
-            loop();
+            resizeCanvas();
+            animationId = requestAnimationFrame(gameLoop);
         }
 
         function gameOver() {
             isPlaying = false;
             isGameOver = true;
-            cancelAnimationFrame(animationId);
+
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+
             gameOverMsg.classList.remove('hidden');
 
             if (score > highScore) {
                 highScore = score;
-                localStorage.setItem('miraMaikelHighScore', highScore);
-                highScoreEl.innerText = `HI ${Math.floor(highScore).toString().padStart(5, '0')}`;
+                localStorage.setItem('miraMaikelHighScore', highScore.toString());
+                highScoreEl.innerText = `HI ${highScore.toString().padStart(5, '0')}`;
             }
         }
 
-        function loop() {
+        // ==================== GAME LOOP ====================
+        function gameLoop(currentTime) {
             if (!isPlaying) return;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            // Calculate delta time in milliseconds
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
 
-            // Updates
-            gameSpeed += SPEED_INCREMENT;
-            score += 0.1;
-            scoreEl.innerText = Math.floor(score).toString().padStart(5, '0');
-            frameCount++;
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
-            player.update();
-            spawnObstacles();
+            // Update game speed
+            if (gameSpeed < CONFIG.MAX_SPEED) {
+                gameSpeed += CONFIG.SPEED_INCREMENT * deltaTime;
+            }
 
-            // Obstacles
+            // Update distance traveled
+            distanceTraveled += gameSpeed;
+
+            // Update score (increases with distance)
+            const newScore = Math.floor(distanceTraveled / 10);
+
+            // Check for milestone (cada 100 puntos)
+            if (Math.floor(newScore / 100) > Math.floor(lastMilestone / 100)) {
+                flashScore = true;
+                setTimeout(() => { flashScore = false; }, 200);
+            }
+
+            score = newScore;
+            lastMilestone = score;
+
+            // Update score display with flash effect
+            if (flashScore) {
+                scoreEl.style.opacity = '0.3';
+            } else {
+                scoreEl.style.opacity = '1';
+            }
+            scoreEl.innerText = score.toString().padStart(5, '0');
+
+            // Spawn obstacles
+            if (distanceTraveled >= nextObstacleDistance) {
+                spawnObstacle();
+            }
+
+            // Spawn clouds
+            if (distanceTraveled >= nextCloudDistance) {
+                spawnCloud();
+            }
+
+            // Update and draw clouds
+            for (let i = clouds.length - 1; i >= 0; i--) {
+                clouds[i].update(deltaTime);
+                clouds[i].draw();
+
+                if (clouds[i].markedForDeletion) {
+                    clouds.splice(i, 1);
+                }
+            }
+
+            // Update player
+            player.update(deltaTime);
+
+            // Update and draw obstacles
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].update();
+                obstacles[i].update(deltaTime);
                 obstacles[i].draw();
+
                 if (obstacles[i].markedForDeletion) {
                     obstacles.splice(i, 1);
                 }
             }
 
+            // Draw player
             player.draw();
 
-            // Ground Line
+            // Draw ground line
             ctx.beginPath();
-            ctx.moveTo(0, canvas.height - 10);
-            ctx.lineTo(canvas.width, canvas.height - 10);
+            ctx.moveTo(0, canvas.clientHeight - CONFIG.GROUND_HEIGHT);
+            ctx.lineTo(canvas.clientWidth, canvas.clientHeight - CONFIG.GROUND_HEIGHT);
             ctx.strokeStyle = '#535353';
+            ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Collision Check
+            // Check collisions
             if (checkCollisions()) {
                 gameOver();
                 return;
             }
 
-            animationId = requestAnimationFrame(loop);
+            // Continue loop
+            animationId = requestAnimationFrame(gameLoop);
         }
 
-        // Input Handling
+        // ==================== INPUT HANDLING ====================
         function handleInput(e) {
-            // Spacebar or Up Arrow
-            if ((e.code === 'Space' || e.code === 'ArrowUp') || e.type === 'touchstart' || e.type === 'mousedown') {
-                if (e.type !== 'touchstart' && e.type !== 'mousedown') e.preventDefault();
+            const isJumpKey = e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW';
+            const isClick = e.type === 'touchstart' || e.type === 'mousedown';
 
-                if (isGameOver) {
-                    resetGame();
-                } else if (!isPlaying) {
+            if (isJumpKey || isClick) {
+                if (isJumpKey) {
+                    e.preventDefault();
+                }
+
+                if (isGameOver || !isPlaying) {
                     resetGame();
                 } else {
                     player.jump();
@@ -343,10 +580,18 @@
 
         window.addEventListener('keydown', handleInput);
         window.addEventListener('touchstart', handleInput, { passive: false });
-        window.addEventListener('mousedown', handleInput); // For PC mouse clicks too
+        window.addEventListener('mousedown', handleInput);
 
-        // Initial draw
+        // Prevent space from scrolling
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+
+        // ==================== INITIAL SETUP ====================
         resizeCanvas();
+        player.y = player.groundY;
     </script>
 </body>
 

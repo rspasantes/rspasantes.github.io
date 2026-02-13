@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mira Maikel Sin Manos</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            color: #535353;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 300px;
+            border-bottom: 2px solid #535353;
+            overflow: hidden;
+            background-color: #f7f7f7;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .message {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-align: center;
+            background-color: rgba(247, 247, 247, 0.8);
+            padding: 10px;
+        }
+
+        .sub-message {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #high-score {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="score">00000</div>
+        <div id="high-score">HI 00000</div>
+
+        <div id="ui-layer">
+            <div id="start-message" class="message">
+                MIRA MAIKEL SIN MANOS
+                <div class="sub-message" id="input-instruction">Press SPACE to jump</div>
+            </div>
+            <div id="game-over-message" class="message hidden">
+                GAME OVER
+                <div class="sub-message">Tap or Press SPACE to restart</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const GRAVITY = 0.6;
+        const JUMP_FORCE = -10;
+        const GROUND_Y = 250;
+        const GAME_SPEED_INITIAL = 6;
+        const SPEED_INCREMENT = 0.001;
+        const OBSTACLE_SPAWN_MIN = 60; // frames
+        const OBSTACLE_SPAWN_MAX = 120; // frames
+
+        // DOM Elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('high-score');
+        const startMsg = document.getElementById('start-message');
+        const gameOverMsg = document.getElementById('game-over-message');
+        const inputInstruction = document.getElementById('input-instruction');
+
+        // Game State
+        let gameSpeed = GAME_SPEED_INITIAL;
+        let score = 0;
+        let highScore = localStorage.getItem('miraMaikelHighScore') || 0;
+        let frameCount = 0;
+        let isPlaying = false;
+        let isGameOver = false;
+        let animationId;
+
+        // Mobile Detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            inputInstruction.innerText = "Tap to jump";
+        }
+
+        // Updating High Score UI
+        highScoreEl.innerText = `HI ${Math.floor(highScore).toString().padStart(5, '0')}`;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Entity Classes
+        class Player {
+            constructor() {
+                this.w = 40;
+                this.h = 40;
+                this.x = 50;
+                this.y = canvas.height - this.h - 10; // Simple ground level approx
+                this.dy = 0;
+                this.jumpTimer = 0;
+                this.grounded = true;
+                this.color = '#535353';
+            }
+
+            jump() {
+                if (this.grounded) {
+                    this.dy = JUMP_FORCE;
+                    this.grounded = false;
+                }
+            }
+
+            update() {
+                // Apply Gravity
+                this.dy += GRAVITY;
+                this.y += this.dy;
+
+                // Ground Collision
+                // Calculate dynamic ground based on canvas height just in case, 
+                // but for simplicity we keep a fixed relative bottom 
+                const groundLevel = canvas.height - 10;
+
+                if (this.y + this.h > groundLevel) {
+                    this.y = groundLevel - this.h;
+                    this.dy = 0;
+                    this.grounded = true;
+                } else {
+                    this.grounded = false;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+
+                // Optional: Simple eye to give character
+                ctx.fillStyle = '#f7f7f7';
+                ctx.fillRect(this.x + 24, this.y + 8, 4, 4);
+            }
+        }
+
+        class Obstacle {
+            constructor() {
+                this.w = 20 + Math.random() * 30;
+                this.h = 30 + Math.random() * 30;
+                this.x = canvas.width;
+                this.y = canvas.height - 10 - this.h;
+                this.markedForDeletion = false;
+                this.color = '#535353';
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                if (this.x + this.w < 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+        }
+
+        // Game Objects
+        let player = new Player();
+        let obstacles = [];
+        let nextSpawnAttempt = 0;
+
+        function spawnObstacles() {
+            if (frameCount >= nextSpawnAttempt) {
+                obstacles.push(new Obstacle());
+                // Randomize next spawn
+                let min_spawn = OBSTACLE_SPAWN_MIN - (gameSpeed * 2);
+                if (min_spawn < 20) min_spawn = 20; // Cap max spawn rate
+
+                nextSpawnAttempt = frameCount + min_spawn + Math.random() * OBSTACLE_SPAWN_MAX;
+            }
+        }
+
+        function checkCollisions() {
+            for (let obs of obstacles) {
+                // Axis-Aligned Bounding Box Collision
+                if (
+                    player.x < obs.x + obs.w &&
+                    player.x + player.w > obs.x &&
+                    player.y < obs.y + obs.h &&
+                    player.y + player.h > obs.y // Fixed collision logic
+                ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function resetGame() {
+            player = new Player();
+            obstacles = [];
+            score = 0;
+            gameSpeed = GAME_SPEED_INITIAL;
+            frameCount = 0;
+            nextSpawnAttempt = 0;
+            isGameOver = false;
+            isPlaying = true;
+            scoreEl.innerText = "00000";
+
+            startMsg.classList.add('hidden');
+            gameOverMsg.classList.add('hidden');
+
+            resizeCanvas(); // Ensure size is correct
+            loop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            isGameOver = true;
+            cancelAnimationFrame(animationId);
+            gameOverMsg.classList.remove('hidden');
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('miraMaikelHighScore', highScore);
+                highScoreEl.innerText = `HI ${Math.floor(highScore).toString().padStart(5, '0')}`;
+            }
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Updates
+            gameSpeed += SPEED_INCREMENT;
+            score += 0.1;
+            scoreEl.innerText = Math.floor(score).toString().padStart(5, '0');
+            frameCount++;
+
+            player.update();
+            spawnObstacles();
+
+            // Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                obstacles[i].draw();
+                if (obstacles[i].markedForDeletion) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            player.draw();
+
+            // Ground Line
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 10);
+            ctx.lineTo(canvas.width, canvas.height - 10);
+            ctx.strokeStyle = '#535353';
+            ctx.stroke();
+
+            // Collision Check
+            if (checkCollisions()) {
+                gameOver();
+                return;
+            }
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // Input Handling
+        function handleInput(e) {
+            // Spacebar or Up Arrow
+            if ((e.code === 'Space' || e.code === 'ArrowUp') || e.type === 'touchstart' || e.type === 'mousedown') {
+                if (e.type !== 'touchstart' && e.type !== 'mousedown') e.preventDefault();
+
+                if (isGameOver) {
+                    resetGame();
+                } else if (!isPlaying) {
+                    resetGame();
+                } else {
+                    player.jump();
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleInput);
+        window.addEventListener('touchstart', handleInput, { passive: false });
+        window.addEventListener('mousedown', handleInput); // For PC mouse clicks too
+
+        // Initial draw
+        resizeCanvas();
+    </script>
+</body>
+
+</html>
